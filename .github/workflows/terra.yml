@@ -34,9 +34,3 @@ jobs:
 
       - name: Terraform Apply
         run: terraform apply -auto-approve
-
-      - name: Wait for 1 hour
-        run: sleep 3600  # 3600 seconds = 1 hour
-
-      - name: Terraform Destroy
-        run: terraform destroy -auto-approve
