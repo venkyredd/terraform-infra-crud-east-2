@@ -1,5 +1,5 @@
 provider "aws" {
-  region = "us-east-2"
+  region = "ap-south-1"
 }
 
 # Availability Zones
@@ -146,7 +146,7 @@ resource "aws_ecs_cluster" "cluster" {
 
 # IAM Role for ECS Task Execution
 resource "aws_iam_role" "task_exec_role" {
-  name = "v-task-exec-role"
+  name = "ve-task-exec-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -167,62 +167,7 @@ resource "aws_iam_role_policy_attachment" "task_policy" {
 
 # CloudWatch Log Group
 resource "aws_cloudwatch_log_group" "logs" {
-  name              = "/ecs/v-app"
+  name              = "/ecs/ve-app"
   retention_in_days = 7
 }
 
-# ECS Task Definition
-resource "aws_ecs_task_definition" "task" {
-  family                   = "v-task"
-  cpu                      = "256"
-  memory                   = "512"
-  network_mode             = "awsvpc"
-  requires_compatibilities = ["FARGATE"]
-  execution_role_arn       = aws_iam_role.task_exec_role.arn
-
-  container_definitions = jsonencode([{
-    name      = "v-container"
-    image     = "011528270926.dkr.ecr.us-east-1.amazonaws.com/v/crud-p1"
-    essential = true
-    portMappings = [{
-      containerPort = 80,
-      protocol      = "tcp"
-    }]
-    logConfiguration = {
-      logDriver = "awslogs",
-      options = {
-        awslogs-group         = aws_cloudwatch_log_group.logs.name,
-        awslogs-region        = "us-east-2",
-        awslogs-stream-prefix = "v"
-      }
-    }
-  }])
-}
-
-# ECS Service
-resource "aws_ecs_service" "service" {
-  name            = "v-service"
-  cluster         = aws_ecs_cluster.cluster.id
-  launch_type     = "FARGATE"
-  task_definition = aws_ecs_task_definition.task.arn
-  desired_count   = 1
-
-  network_configuration {
-    subnets         = aws_subnet.private[*].id
-    security_groups = [aws_security_group.alb_sg.id]
-    assign_public_ip = false
-  }
-
-  load_balancer {
-    target_group_arn = aws_lb_target_group.tg.arn
-    container_name   = "v-container"
-    container_port   = 80
-  }
-
-  depends_on = [aws_lb_listener.listener]
-}
-
-# Output
-output "alb_dns" {
-  value = aws_lb.alb.dns_name
-}
